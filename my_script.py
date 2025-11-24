@@ -537,14 +537,31 @@ for date in sorted(unique_dates_to_plot):
     plt.close(fig)
 
 
+# --- Numeric totals for plots (independent of summary_df text table) ---
+
+total_kwh_peak_numeric = daily_summary_df['plotted_kwh_peak'].sum()
+total_kwh_offpeak_numeric = daily_summary_df['plotted_kwh_off_peak'].sum()
+
+total_cost_peak_numeric = total_kwh_peak_numeric * RATE_WD_PEAK
+total_cost_offpeak_numeric = total_kwh_offpeak_numeric * RATE_WD_OFF_PEAK
+
 # --- Total Cost Pie Chart ---
 fig, ax = plt.subplots(figsize=(6, 6))
 labels = ['Peak Cost', 'Off-Peak Cost']
-sizes = [summary_df['total_cost_peak'].iloc[0], summary_df['total_cost_off_peak'].iloc[0]]
+sizes = [total_cost_peak_numeric, total_cost_offpeak_numeric]
 
 ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140)
 ax.set_title("Total Cost Breakdown (Peak vs Off-Peak)")
 st.pyplot(fig)
+
+fig2, ax2 = plt.subplots(figsize=(6, 6))
+labels2 = ['Peak kWh', 'Off-Peak kWh']
+sizes2 = [total_kwh_peak_numeric, total_kwh_offpeak_numeric]
+
+ax2.bar(labels2, sizes2)
+ax2.set_ylabel("kWh")
+ax2.set_title("Energy Consumption Breakdown (Peak vs Off-Peak)")
+st.pyplot(fig2)
 
 
 # # --- Total kWh Bar Chart ---
