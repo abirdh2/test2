@@ -565,6 +565,35 @@ ax2.set_ylabel("kWh")
 ax2.set_title("Energy Consumption Breakdown (Peak vs Off-Peak)")
 st.pyplot(fig2)
 
+st.subheader("📊 Summary Visualizations")
+
+# --- Energy Breakdown Chart (kWh) ---
+energy_labels = ["Total kWh", "Peak kWh", "Off-Peak kWh"]
+energy_values = [total_kwh_overall, total_peak_kwh, total_off_peak_kwh]
+
+fig1, ax1 = plt.subplots(figsize=(6, 4))
+ax1.bar(energy_labels, energy_values)
+ax1.set_ylabel("kWh")
+ax1.set_title("Energy Breakdown (kWh)")
+
+for i, v in enumerate(energy_values):
+    ax1.text(i, v + max(energy_values) * 0.01, f"{v:.2f}", ha="center")
+
+st.pyplot(fig1)
+
+# --- Cost Breakdown Chart (₪) ---
+cost_labels = ["Peak Cost (₪)", "Off-Peak Cost (₪)", "Total Cost (₪)"]
+cost_values = [cost_total_peak_kwh, cost_total_off_peak_kwh, total_cost]
+
+fig2, ax2 = plt.subplots(figsize=(6, 4))
+ax2.bar(cost_labels, cost_values)
+ax2.set_ylabel("₪")
+ax2.set_title("Cost Breakdown (₪)")
+
+for i, v in enumerate(cost_values):
+    ax2.text(i, v + max(cost_values) * 0.01, f"₪ {v:.2f}", ha="center")
+
+st.pyplot(fig2)
 
 # print("Hourly plots generated for each day in the filtered range.") # Commented out logging print
 
