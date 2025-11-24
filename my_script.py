@@ -542,8 +542,8 @@ for date in sorted(unique_dates_to_plot):
 total_kwh_peak_numeric = daily_summary_df['plotted_kwh_peak'].sum()
 total_kwh_offpeak_numeric = daily_summary_df['plotted_kwh_off_peak'].sum()
 
-total_cost_peak_numeric = total_kwh_peak_numeric * RATE_WD_PEAK
-total_cost_offpeak_numeric = total_kwh_offpeak_numeric * RATE_WD_OFF_PEAK
+total_cost_peak_numeric = total_kwh_peak_numeric * WEEKDAY_PEAK_RATE_DEFAULT
+total_cost_offpeak_numeric = total_kwh_offpeak_numeric * WEEKDAY_OFFPEAK_RATE_DEFAULT
 
 # --- Total Cost Pie Chart ---
 fig, ax = plt.subplots(figsize=(6, 6))
