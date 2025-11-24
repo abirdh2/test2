@@ -601,29 +601,38 @@ fig, ax = plt.subplots(figsize=(8, 5))
 ax.bar(['Peak kWh', 'Off-Peak kWh'], [total_peak_kwh, total_off_peak_kwh], color=['lightcoral', 'lightgreen'], label='kWh')
 ax.set_ylabel('Total Energy (kWh)')
 ax.set_title('Peak vs Off-Peak Energy Consumption')
-for i, v in enumerate([total_peak_kwh, total_off_peak_kwh]):
-    ax.text(i, v + 0.5, f"{v:.2f}", ha='center', va='bottom', fontsize=10)
 
-# Add combined total value above the two bars
+# Add individual bar labels
+for i, v in enumerate([total_peak_kwh, total_off_peak_kwh]):
+    ax.text(i, v + v * 0.05, f"{v:.2f}", ha='center', va='bottom', fontsize=10)
+
+# Add combined total value above the bars with padding
 combined_total_kwh = total_peak_kwh + total_off_peak_kwh
-ax.text(0.5, combined_total_kwh + 1, f"Total: {combined_total_kwh:.2f} kWh", ha='center', va='bottom', fontsize=12, fontweight='bold')
+ax.text(0.5, combined_total_kwh + combined_total_kwh * 0.08, f"Total: {combined_total_kwh:.2f} kWh",
+        ha='center', va='bottom', fontsize=12, fontweight='bold', color='darkblue')
 
 plt.tight_layout()
 st.pyplot(fig)
 
 fig2, ax2 = plt.subplots(figsize=(8, 5))
-ax2.bar(['Peak Cost', 'Off-Peak Cost'], [cost_total_peak_kwh, cost_total_off_peak_kwh], color=['salmon', 'lightblue'], label='Cost')
+ax2.bar(['Peak Cost', 'Off-Peak Cost'], [cost_total_peak_kwh, cost_total_off_peak_kwh],
+        color=['salmon', 'lightblue'], label='Cost')
 ax2.set_ylabel('Total Cost (₪)')
 ax2.set_title('Cost Breakdown: Peak vs Off-Peak')
-for i, v in enumerate([cost_total_peak_kwh, cost_total_off_peak_kwh]):
-    ax2.text(i, v + 0.5, f"₪ {v:.2f}", ha='center', va='bottom', fontsize=10)
 
-# Add combined total cost above the two bars
+# Add individual bar labels
+for i, v in enumerate([cost_total_peak_kwh, cost_total_off_peak_kwh]):
+    ax2.text(i, v + v * 0.05, f"₪ {v:.2f}", ha='center', va='bottom', fontsize=10)
+
+# Add combined total cost above the bars with padding
 combined_total_cost = cost_total_peak_kwh + cost_total_off_peak_kwh
-ax2.text(0.5, combined_total_cost + 1, f"Total: ₪ {combined_total_cost:.2f}", ha='center', va='bottom', fontsize=12, fontweight='bold')
+ax2.text(0.5, combined_total_cost + combined_total_cost * 0.08,
+         f"Total: ₪ {combined_total_cost:.2f}", ha='center', va='bottom',
+         fontsize=12, fontweight='bold', color='darkblue')
 
 plt.tight_layout()
 st.pyplot(fig2)
+
 
 # print("Hourly plots generated for each day in the filtered range.") # Commented out logging print
 
