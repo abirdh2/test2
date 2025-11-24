@@ -390,6 +390,30 @@ hourly_df_plot['date_local'] = pd.to_datetime(hourly_df_plot['date_local'], erro
 hourly_df_plot['hour_local'] = pd.to_numeric(hourly_df_plot['hour_local'], errors='coerce')
 holidays_series = holidays.CountryHoliday('US', years=hourly_df_plot['date_local'].dt.year.unique())  # adjust country
 
+# --- Load hourly data and prepare hourly_df_plot ---
+with sqlite3.connect("energy_data.db") as conn_hourly:
+    hourly_df = pd.read_sql_query("SELECT * FROM hourly_deltas", conn_hourly)
+
+# Ensure date_local is datetime
+hourly_df['date_local'] = pd.to_datetime(hourly_df['date_local'], errors='coerce')
+
+# Filter by selected start and end dates
+start_date_dt = pd.to_datetime(START_DATE)
+end_date_dt = pd.to_datetime(END_DATE)
+hourly_df_filtered = hourly_df[(hourly_df['date_local'] >= start_date_dt) & (hourly_df['date_local'] <= end_date_dt)].copy()
+
+# Limit to first 31 unique days if needed
+unique_days = hourly_df_filtered['date_local'].dt.normalize().unique()
+if len(unique_days) > 31:
+    days_to_keep = pd.Series(unique_days).sort_values().head(31).tolist()
+    hourly_df_plot = hourly_df_filtered[hourly_df_filtered['date_local'].dt.normalize().isin(days_to_keep)].copy()
+else:
+    hourly_df_plot = hourly_df_filtered.copy()
+
+# Ensure numeric for hour_local
+hourly_df_plot['hour_local'] = pd.to_numeric(hourly_df_plot['hour_local'], errors='coerce')
+
+
 unique_dates_to_plot = hourly_df_plot['date_local'].dt.normalize().unique()
 for date in sorted(unique_dates_to_plot):
     date_str = date.strftime('%Y-%m-%d')
