@@ -330,9 +330,22 @@ print("\n--- Aggregated Consumption and Cost Summary ---")
 print(summary_df)
 
 # --- Sidebar filters ---
-START_DATE = st.sidebar.date_input("Start Date", daily_summary_df['date_local'].min())
-END_DATE = st.sidebar.date_input("End Date", daily_summary_df['date_local'].max())
-WEEKEND_HAS_PEAK_RATE = st.sidebar.checkbox("Weekend has peak rate?", value=False)
+START_DATE = st.sidebar.date_input(
+    "Start Date", 
+    daily_summary_df['date_local'].min(),
+    key="start_date_input"
+)
+END_DATE = st.sidebar.date_input(
+    "End Date", 
+    daily_summary_df['date_local'].max(),
+    key="end_date_input"
+)
+WEEKEND_HAS_PEAK_RATE = st.sidebar.checkbox(
+    "Weekend has peak rate?", 
+    value=False,
+    key="weekend_peak_checkbox"
+)
+
 
 # --- Ensure 'date_local' exists and is datetime ---
 if 'date_local' not in daily_summary_df.columns:
@@ -385,12 +398,6 @@ st.pyplot(fig)
 plt.close(fig)
 
 ############
-
-
-# --- Sidebar filters ---
-START_DATE = st.sidebar.date_input("Start Date", daily_summary_df['date_local'].min())
-END_DATE = st.sidebar.date_input("End Date", daily_summary_df['date_local'].max())
-WEEKEND_HAS_PEAK_RATE = st.sidebar.checkbox("Weekend has peak rate?", value=False)
 
 # --- Load hourly data from SQLite ---
 with sqlite3.connect("energy_data.db") as conn_hourly:
