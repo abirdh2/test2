@@ -329,29 +329,22 @@ summary_df = pd.DataFrame(summary_data)
 print("\n--- Aggregated Consumption and Cost Summary ---")
 print(summary_df)
 
-# Convert date columns
-df['date_local'] = pd.to_datetime(daily_summary_df['date_local'])
-df['delta_kwh'] = pd.to_numeric(daily_summary_df['delta_kwh'])
-
 # --- Sidebar filters ---
-START_DATE = st.sidebar.date_input("Start Date", df['date_local'].min())
-END_DATE = st.sidebar.date_input("End Date", df['date_local'].max())
-
+START_DATE = st.sidebar.date_input("Start Date", daily_summary_df['date_local'].min())
+END_DATE = st.sidebar.date_input("End Date", daily_summary_df['date_local'].max())
 WEEKEND_HAS_PEAK_RATE = st.sidebar.checkbox("Weekend has peak rate?", value=False)
 
-# Filter daily summary
-daily_summary_df = df.groupby('date_local').agg(
-    plotted_kwh_off_peak=('kwh_off_peak', 'sum'),
-    plotted_kwh_peak=('kwh_peak', 'sum'),
-    total_kwh=('delta_kwh', 'sum')
-).reset_index()
+# --- Ensure 'date_local' exists and is datetime ---
+if 'date_local' not in daily_summary_df.columns:
+    st.error("Error: 'date_local' column not found in daily_summary_df!")
+else:
+    daily_summary_df['date_local'] = pd.to_datetime(daily_summary_df['date_local'], errors='coerce')
+    daily_summary_df = daily_summary_df[
+        (daily_summary_df['date_local'] >= pd.to_datetime(START_DATE)) &
+        (daily_summary_df['date_local'] <= pd.to_datetime(END_DATE))
+    ].copy()
 
-daily_summary_df = daily_summary_df[
-    (daily_summary_df['date_local'] >= pd.to_datetime(START_DATE)) &
-    (daily_summary_df['date_local'] <= pd.to_datetime(END_DATE))
-].copy()
-
-# --- 2. Daily Summary Plot ---
+# --- Daily Summary Plot ---
 off_peak_label = 'Off-Peak kWh'
 peak_label = 'Peak kWh'
 
@@ -391,27 +384,12 @@ plt.savefig(f'{folder_daily}/daily_energy_consumption.png')
 st.pyplot(fig)
 plt.close(fig)
 
-# --- 3. Load hourly data from SQLite ---
-with sqlite3.connect("energy_data.db") as conn_hourly:
-    hourly_df = pd.read_sql_query("SELECT * FROM hourly_deltas", conn_hourly)
+# --- Hourly Plots ---
+# Ensure 'date_local' is datetime in hourly_df_plot
+hourly_df_plot['date_local'] = pd.to_datetime(hourly_df_plot['date_local'], errors='coerce')
+hourly_df_plot['hour_local'] = pd.to_numeric(hourly_df_plot['hour_local'], errors='coerce')
+holidays_series = holidays.CountryHoliday('US', years=hourly_df_plot['date_local'].dt.year.unique())  # adjust country
 
-hourly_df["date_local"] = pd.to_datetime(hourly_df["date_local"])
-start_date_dt = pd.to_datetime(START_DATE)
-end_date_dt = pd.to_datetime(END_DATE)
-hourly_df_filtered = hourly_df[(hourly_df["date_local"] >= start_date_dt) & (hourly_df["date_local"] <= end_date_dt)].copy()
-
-unique_days = hourly_df_filtered["date_local"].dt.normalize().unique()
-if len(unique_days) > 31:
-    days_to_keep = pd.Series(unique_days).sort_values().head(31).tolist()
-    hourly_df_plot = hourly_df_filtered[hourly_df_filtered["date_local"].dt.normalize().isin(days_to_keep)].copy()
-else:
-    hourly_df_plot = hourly_df_filtered.copy()
-
-hourly_df_plot['hour_local'] = pd.to_numeric(hourly_df_plot['hour_local'])
-
-holidays_series = holidays.CountryHoliday('US', years=hourly_df_plot['date_local'].dt.year.unique())  # adjust country as needed
-
-# --- 4. Hourly plots ---
 unique_dates_to_plot = hourly_df_plot['date_local'].dt.normalize().unique()
 for date in sorted(unique_dates_to_plot):
     date_str = date.strftime('%Y-%m-%d')
@@ -439,7 +417,6 @@ for date in sorted(unique_dates_to_plot):
 
     peak_label_current_day = 'Peak (17-22) kWh'
     off_peak_label_current_day = 'Off-Peak (22-17) kWh'
-
     if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
         peak_label_current_day = 'Peak (Weekday Only) kWh'
         off_peak_label_current_day = 'Off-Peak (Includes Weekend/Holiday) kWh'
@@ -453,7 +430,6 @@ for date in sorted(unique_dates_to_plot):
     title_suffix = ''
     if is_current_day_weekend_or_holiday:
         title_suffix = ' (Weekend/Holiday Treated as Off-Peak)' if not WEEKEND_HAS_PEAK_RATE else ' (Weekend/Holiday with Peak Rates)'
-
     ax.set_title(f'Hourly Energy Consumption for {date_str}{title_suffix}', fontsize=14)
     ax.set_xticks(range(24))
     ax.legend()
