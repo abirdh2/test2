@@ -259,7 +259,7 @@ query = f"""
 SELECT
     {','.join(base_query_parts)}
 FROM daily_summary T1
-WHERE T1.date_local BETWEEN '{}' AND '{END_DATE}'
+WHERE T1.date_local BETWEEN '{START_DATE}' AND '{END_DATE}'
 """
 
 with sqlite3.connect("energy_data.db") as conn_report:
