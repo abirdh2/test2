@@ -357,6 +357,9 @@ else:
         (daily_summary_df['date_local'] <= pd.to_datetime(END_DATE))
     ].copy()
 
+    # Reset index so x_pos matches iterrows
+    daily_summary_df = daily_summary_df.reset_index(drop=True)
+
 # --- Daily Summary Plot ---
 off_peak_label = 'Off-Peak kWh'
 peak_label = 'Peak kWh'
