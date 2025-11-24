@@ -342,7 +342,7 @@ END_DATE = st.sidebar.date_input(
 st.sidebar.markdown("### ⚡ Electricity Rates")
 
 WEEKDAY_PEAK_RATE = st.sidebar.number_input(
-    "Weekday Peak Rate ($/kWh)",
+    "Weekday Peak Rate (₪/kWh)",
     min_value=0.0,
     max_value=5.0,
     value=WEEKDAY_PEAK_RATE_DEFAULT,
@@ -352,7 +352,7 @@ WEEKDAY_PEAK_RATE = st.sidebar.number_input(
 )
 
 WEEKDAY_OFFPEAK_RATE = st.sidebar.number_input(
-    "Weekday Off-Peak Rate ($/kWh)",
+    "Weekday Off-Peak Rate (₪/kWh)",
     min_value=0.0,
     max_value=5.0,
     value=WEEKDAY_OFFPEAK_RATE_DEFAULT,
@@ -362,7 +362,7 @@ WEEKDAY_OFFPEAK_RATE = st.sidebar.number_input(
 )
 
 WEEKEND_PEAK_RATE = st.sidebar.number_input(
-    "Weekend Peak Rate ($/kWh)",
+    "Weekend Peak Rate (₪/kWh)",
     min_value=0.0,
     max_value=5.0,
     value=WEEKEND_PEAK_RATE_DEFAULT,
@@ -372,7 +372,7 @@ WEEKEND_PEAK_RATE = st.sidebar.number_input(
 )
 
 WEEKEND_OFFPEAK_RATE = st.sidebar.number_input(
-    "Weekend Off-Peak Rate ($/kWh)",
+    "Weekend Off-Peak Rate (₪/kWh)",
     min_value=0.0,
     max_value=5.0,
     value=WEEKEND_OFFPEAK_RATE_DEFAULT,
