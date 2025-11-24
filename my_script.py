@@ -326,6 +326,8 @@ print("\n--- Aggregated Consumption and Cost Summary ---")
 print(summary_df)
 
 # --- Sidebar filters ---
+st.sidebar.markdown("### 📅 Date")
+
 START_DATE = st.sidebar.date_input(
     "Start Date", 
     daily_summary_df['date_local'].min(),
@@ -344,7 +346,8 @@ WEEKDAY_PEAK_RATE = st.sidebar.number_input(
     min_value=0.0,
     max_value=5.0,
     value=WEEKDAY_PEAK_RATE_DEFAULT,
-    step=0.001,
+    step=0.0001,
+    format="%.10f",   # 👈 prevents rounding
     key="weekday_peak_rate"
 )
 
@@ -353,7 +356,8 @@ WEEKDAY_OFFPEAK_RATE = st.sidebar.number_input(
     min_value=0.0,
     max_value=5.0,
     value=WEEKDAY_OFFPEAK_RATE_DEFAULT,
-    step=0.001,
+    step=0.0001,
+    format="%.10f",
     key="weekday_offpeak_rate"
 )
 
@@ -362,7 +366,8 @@ WEEKEND_PEAK_RATE = st.sidebar.number_input(
     min_value=0.0,
     max_value=5.0,
     value=WEEKEND_PEAK_RATE_DEFAULT,
-    step=0.001,
+    step=0.0001,
+    format="%.10f",
     key="weekend_peak_rate"
 )
 
@@ -371,7 +376,8 @@ WEEKEND_OFFPEAK_RATE = st.sidebar.number_input(
     min_value=0.0,
     max_value=5.0,
     value=WEEKEND_OFFPEAK_RATE_DEFAULT,
-    step=0.001,
+    step=0.0001,
+    format="%.10f",
     key="weekend_offpeak_rate"
 )
 
