@@ -1,8 +1,8 @@
 import streamlit as st
 import gspread
-from google.auth import default
-import sqlite3
+from google.oauth2.service_account import Credentials
 import pandas as pd
+import sqlite3
 from zoneinfo import ZoneInfo
 import holidays
 import matplotlib.pyplot as plt
