@@ -346,8 +346,8 @@ WEEKDAY_PEAK_RATE = st.sidebar.number_input(
     min_value=0.0,
     max_value=5.0,
     value=WEEKDAY_PEAK_RATE_DEFAULT,
-    step=0.0001,
-    format="%.10f",   # 👈 prevents rounding
+    step=0.001,
+    format="%.3f",   # 👈 prevents rounding
     key="weekday_peak_rate"
 )
 
@@ -356,8 +356,8 @@ WEEKDAY_OFFPEAK_RATE = st.sidebar.number_input(
     min_value=0.0,
     max_value=5.0,
     value=WEEKDAY_OFFPEAK_RATE_DEFAULT,
-    step=0.0001,
-    format="%.10f",
+    step=0.001,
+    format="%.3f",
     key="weekday_offpeak_rate"
 )
 
@@ -366,8 +366,8 @@ WEEKEND_PEAK_RATE = st.sidebar.number_input(
     min_value=0.0,
     max_value=5.0,
     value=WEEKEND_PEAK_RATE_DEFAULT,
-    step=0.0001,
-    format="%.10f",
+    step=0.001,
+    format="%.3f",
     key="weekend_peak_rate"
 )
 
@@ -376,8 +376,8 @@ WEEKEND_OFFPEAK_RATE = st.sidebar.number_input(
     min_value=0.0,
     max_value=5.0,
     value=WEEKEND_OFFPEAK_RATE_DEFAULT,
-    step=0.0001,
-    format="%.10f",
+    step=0.001,
+    format="%.3f",
     key="weekend_offpeak_rate"
 )
 
