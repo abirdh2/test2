@@ -10,33 +10,28 @@ import seaborn as sns
 from os import path, makedirs
 import hmac
 
-# 1. Get the password the user entered
-entered_password = st.text_input("🔑 Enter password", type="password")
-
-# 2. Retrieve the stored secret safely
 try:
     stored_secret = st.secrets["pass"]["app_password"]
 except KeyError:
     # Handle the configuration error if the secret isn't found
     st.error("🚨 Configuration Error: The secret 'pass.app_password' was not found in secrets.toml.")
     st.stop()
+    
 
-# 3. Check if the user has entered anything AND if the secret was retrieved
-# We don't want to show the error immediately on load, only after an attempt.
+# 1. Get the password the user entered
+entered_password = st.text_input("🔑 Enter password", type="password")
+
+
+# 2. Only proceed if the user has entered something
 if entered_password: 
     
-    # Securely compare the entered password with the stored secret
-    # If they DO NOT MATCH (which means the user is unauthorized)
+    # Securely check if the entered password DOES NOT MATCH the stored secret
     if not hmac.compare_digest(entered_password, stored_secret):
         st.error("😕 Password incorrect. Access denied.")
         st.stop() # Stop the application immediately
         
-    # If they DO MATCH, the execution continues past this block
-
-# 4. If nothing is entered yet, check if the app should run anyway
-# If the user hasn't entered anything, we must still stop the app to protect content.
-# This prevents the content from running when the page first loads and 'entered_password' is empty.
-if not entered_password:
+# 3. Stop the app if the input is empty (i.e., when the page first loads)
+else:
     st.stop()
 
 # --- Define Date Window Parameters, Price Rates, and Holidays ---
