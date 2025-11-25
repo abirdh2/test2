@@ -10,27 +10,30 @@ import seaborn as sns
 from os import path, makedirs
 import hmac
 
-# Get the password the user entered from the text input widget
+# 1. Get the password the user entered
 entered_password = st.text_input("🔑 Enter password", type="password")
 
-# Securely check if the entered password matches the secret
-# Note: st.secrets["app_password"] is used here, matching the structure in option 2.
-if entered_password: # Only proceed if the user has typed something
+# 2. Retrieve the stored secret safely
+# Use .get() to avoid errors if the key isn't found
+stored_secret = st.secrets.get("app_password")
+
+# 3. Check if the user has entered anything AND if the secret was retrieved
+# We don't want to show the error immediately on load, only after an attempt.
+if entered_password: 
     
-    # hmac.compare_digest returns True if they match
-    if hmac.compare_digest(entered_password, st.secrets["pass"]["app_password"]):
-        # Passwords match: Show the content
-        st.success("Access Granted!")
+    # Securely compare the entered password with the stored secret
+    # If they DO NOT MATCH (which means the user is unauthorized)
+    if not hmac.compare_digest(entered_password, stored_secret):
+        st.error("😕 Password incorrect. Access denied.")
+        st.stop() # Stop the application immediately
         
-        # --- Start of Secured Content ---
-        st.title("Welcome to the Private Dashboard")
-        st.write("This content is only visible after a successful login.")
-        # --- End of Secured Content ---
-        
-    else:
-        # Passwords don't match: Show error and stop execution
-        st.error("😕 Password incorrect")
-        st.stop() # Prevents the rest of the app from running
+    # If they DO MATCH, the execution continues past this block
+
+# 4. If nothing is entered yet, check if the app should run anyway
+# If the user hasn't entered anything, we must still stop the app to protect content.
+# This prevents the content from running when the page first loads and 'entered_password' is empty.
+if not entered_password:
+    st.stop()
 
 # --- Define Date Window Parameters, Price Rates, and Holidays ---
 START_DATE = '2025-11-01'
