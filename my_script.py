@@ -629,8 +629,8 @@ with sqlite3.connect("energy_data.db") as conn:
     daily_summary_df = pd.read_sql_query("SELECT * FROM daily_summary", conn)
 daily_summary_df['date_local'] = pd.to_datetime(daily_summary_df['date_local'])
 
-START_DATE = st.sidebar.date_input("Start Date", daily_summary_df['date_local'].min())
-END_DATE = st.sidebar.date_input("End Date", daily_summary_df['date_local'].max())
+# START_DATE = st.sidebar.date_input("Start Date", daily_summary_df['date_local'].min())
+# END_DATE = st.sidebar.date_input("End Date", daily_summary_df['date_local'].max())
 
 # Filter daily summary by date
 daily_summary_df = daily_summary_df[
