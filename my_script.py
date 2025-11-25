@@ -597,71 +597,33 @@ st.subheader("Aggregated Consumption and Cost Summary")
 st.dataframe(summary_df)
 
 # --- Visualize Totals ---
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.set_theme(style="whitegrid")
+# --- kWh Plot ---
+fig, ax = plt.subplots(figsize=(8, 5))
+data_kwh = [total_peak_kwh, total_off_peak_kwh]
+combined_total_kwh = sum(data_kwh)
 
-x_pos = daily_hourly_data['hour_local']
-width = 0.8
+ax.bar(['Peak kWh', 'Off-Peak kWh'], data_kwh, color=['lightcoral', 'lightgreen'], label='kWh')
+ax.set_ylabel('Total Energy (kWh)')
+ax.set_title('Peak vs Off-Peak Energy Consumption')
 
-peak_label_current_day = 'Peak (17-22) kWh'
-off_peak_label_current_day = 'Off-Peak (22-17) kWh'
-if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
-    peak_label_current_day = 'Peak (Weekday Only) kWh'
-    off_peak_label_current_day = 'Off-Peak (Includes Weekend/Holiday) kWh'
+# Annotate individual bars
+for i, v in enumerate(data_kwh):
+    ax.text(i, v + 0.5, f"{v:.2f}", ha='center', va='bottom', fontsize=10)
 
-ax.bar(x_pos, daily_hourly_data['kwh_off_peak'], color='lightgreen',
-       width=width, edgecolor='white', label=off_peak_label_current_day)
-ax.bar(x_pos, daily_hourly_data['kwh_peak'], bottom=daily_hourly_data['kwh_off_peak'],
-       color='lightcoral', width=width, edgecolor='white', label=peak_label_current_day)
+# Set Y-limit to ensure space for annotations
+# Use the combined total + a buffer (e.g., 10% of the total, or a fixed amount)
+y_max_kwh = combined_total_kwh * 1.15 if combined_total_kwh > 0 else 5
+ax.set_ylim(0, y_max_kwh)
 
-ax.set_xlabel('Hour of Day (Local Time)', fontsize=12)
-ax.set_ylabel('Energy Consumption (kWh)', fontsize=12)
+# Add combined total value above the bars, now with sufficient space
+# The position (0.5) centers it between the two bars
+ax.text(0.5, combined_total_kwh + (y_max_kwh * 0.05), # Adjusted V position
+        f"Total: {combined_total_kwh:.2f} kWh", 
+        ha='center', va='bottom', fontsize=12, fontweight='bold')
 
-title_suffix = ''
-if is_current_day_weekend_or_holiday:
-    title_suffix = ' (Weekend/Holiday Treated as Off-Peak)' if not WEEKEND_HAS_PEAK_RATE else ' (Weekend/Holiday with Peak Rates)'
-ax.set_title(
-    f'Hourly Energy Consumption for {date_normalized.strftime("%Y-%m-%d")}{title_suffix}',
-    fontsize=14,
-    pad=20  # adds space above title
-)
-
-ax.set_xticks(range(24))
-ax.set_xticklabels(range(24), rotation=0, fontsize=10)
-ax.legend()
-ax.grid(axis='y', linestyle='--', alpha=0.7)
-
-max_kwh_for_day = daily_hourly_data['delta_kwh'].max()
-ax.set_ylim(0, max_kwh_for_day * 1.25 if max_kwh_for_day > 0 else 1)
-
-# Add top margin so labels don't overlap
-ax.margins(y=0.10)
-
-# Annotate bars with more spacing
-for hour, total_kwh in daily_hourly_data[['hour_local', 'delta_kwh']].values:
-    if total_kwh > 0:
-        ax.text(
-            hour, total_kwh + (max_kwh_for_day * 0.05),
-            f"{total_kwh:.2f}",
-            ha='center', va='bottom',
-            fontsize=9
-        )
-
-# Additional spacing around whole figure
-plt.subplots_adjust(top=0.90)
 plt.tight_layout()
-
-folder_hourly = f"from_{START_DATE}_to_{END_DATE}"
-if not path.exists(folder_hourly):
-    makedirs(folder_hourly)
-
-plt.savefig(
-    f'{folder_hourly}/hourly_consumption_{date_normalized.strftime("%Y-%m-%d")}.png',
-    bbox_inches="tight"
-)
-
 st.pyplot(fig)
-plt.close(fig)
+# plt.close(fig) # Optional: good practice to close figures
 
 
 
