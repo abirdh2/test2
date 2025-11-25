@@ -650,13 +650,13 @@ if not WEEKEND_HAS_PEAK_RATE:
 
 
 # --- Compute Costs based on sidebar rates ---
-cost_total_peak_kwh = total_peak_kwh * WEEKDAY_PEAK_RATE
-cost_total_off_peak_kwh = total_off_peak_kwh * WEEKDAY_OFFPEAK_RATE
-if WEEKEND_HAS_PEAK_RATE:
-    cost_total_peak_kwh += total_peak_kwh * WEEKEND_PEAK_RATE
-    cost_total_off_peak_kwh += total_off_peak_kwh * WEEKEND_OFFPEAK_RATE
+# cost_total_peak_kwh = total_peak_kwh * WEEKDAY_PEAK_RATE
+# cost_total_off_peak_kwh = total_off_peak_kwh * WEEKDAY_OFFPEAK_RATE
+# if WEEKEND_HAS_PEAK_RATE:
+#     cost_total_peak_kwh += total_peak_kwh * WEEKEND_PEAK_RATE
+#     cost_total_off_peak_kwh += total_off_peak_kwh * WEEKEND_OFFPEAK_RATE
 
-total_cost = cost_total_peak_kwh + cost_total_off_peak_kwh
+# total_cost = cost_total_peak_kwh + cost_total_off_peak_kwh
 
 # --- Visualize Totals ---
 # --- kWh Plot ---
