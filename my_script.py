@@ -348,6 +348,74 @@ WEEKEND_HAS_PEAK_RATE = st.sidebar.checkbox(
 )
 
 
+# --- AFTER all st.sidebar.number_input widgets are defined ---
+
+# 1. Re-fetch and filter the daily summary using the current sidebar dates
+with sqlite3.connect("energy_data.db") as conn_summary:
+    report_daily_summary = pd.read_sql_query("SELECT * FROM daily_summary", conn_summary)
+    
+report_daily_summary['date_local'] = pd.to_datetime(report_daily_summary['date_local'])
+
+# Filter by the Streamlit sidebar dates
+daily_summary_filtered = report_daily_summary[
+    (report_daily_summary['date_local'] >= pd.to_datetime(START_DATE)) &
+    (report_daily_summary['date_local'] <= pd.to_datetime(END_DATE))
+].copy()
+
+# 2. Determine day types and consumption allocations based on sidebar checkbox
+holidays_series = pd.to_datetime(pd.Series(jewish_holidays)).dt.normalize()
+daily_summary_filtered['is_weekend'] = (daily_summary_filtered['date_local'].dt.weekday == 4) | (daily_summary_filtered['date_local'].dt.weekday == 5)
+daily_summary_filtered['is_holiday'] = daily_summary_filtered['date_local'].dt.normalize().isin(holidays_series)
+daily_summary_filtered['is_weekend_or_holiday'] = daily_summary_filtered['is_weekend'] | daily_summary_filtered['is_holiday']
+
+# Initialize columns for cost calculation
+daily_summary_filtered['kwh_weekday_peak'] = 0.0
+daily_summary_filtered['kwh_weekday_offpeak'] = 0.0
+daily_summary_filtered['kwh_weekend_peak'] = 0.0
+daily_summary_filtered['kwh_weekend_offpeak'] = 0.0
+
+# Logic to distribute kWh based on day type and weekend peak checkbox
+is_weekday = ~daily_summary_filtered['is_weekend_or_holiday']
+is_special_day = daily_summary_filtered['is_weekend_or_holiday']
+
+# Weekday allocation
+daily_summary_filtered.loc[is_weekday, 'kwh_weekday_peak'] = daily_summary_filtered.loc[is_weekday, 'kwh_17_22']
+daily_summary_filtered.loc[is_weekday, 'kwh_weekday_offpeak'] = daily_summary_filtered.loc[is_weekday, 'kwh_22_17']
+
+# Weekend/Holiday allocation
+if WEEKEND_HAS_PEAK_RATE:
+    daily_summary_filtered.loc[is_special_day, 'kwh_weekend_peak'] = daily_summary_filtered.loc[is_special_day, 'kwh_17_22']
+    daily_summary_filtered.loc[is_special_day, 'kwh_weekend_offpeak'] = daily_summary_filtered.loc[is_special_day, 'kwh_22_17']
+else:
+    # Everything on weekend/holiday is off-peak
+    daily_summary_filtered.loc[is_special_day, 'kwh_weekend_offpeak'] = daily_summary_filtered.loc[is_special_day, 'total_kwh']
+
+# 3. Aggregate Consumption
+total_kwh_overall = daily_summary_filtered['total_kwh'].sum()
+
+total_kwh_weekday_peak = daily_summary_filtered['kwh_weekday_peak'].sum()
+total_kwh_weekday_offpeak = daily_summary_filtered['kwh_weekday_offpeak'].sum()
+total_kwh_weekend_peak = daily_summary_filtered['kwh_weekend_peak'].sum()
+total_kwh_weekend_offpeak = daily_summary_filtered['kwh_weekend_offpeak'].sum()
+
+# Aggregate Peak and Off-Peak for the Summary Table
+total_peak_kwh = total_kwh_weekday_peak + total_kwh_weekend_peak
+total_off_peak_kwh = total_kwh_weekday_offpeak + total_kwh_weekend_offpeak
+
+# 4. Calculate Costs using sidebar rates
+cost_weekday_peak = total_kwh_weekday_peak * WEEKDAY_PEAK_RATE
+cost_weekday_offpeak = total_kwh_weekday_offpeak * WEEKDAY_OFFPEAK_RATE
+cost_weekend_peak = total_kwh_weekend_peak * WEEKEND_PEAK_RATE
+cost_weekend_offpeak = total_kwh_weekend_offpeak * WEEKEND_OFFPEAK_RATE
+
+# Aggregate Costs
+cost_total_peak_kwh = cost_weekday_peak + cost_weekend_peak
+cost_total_off_peak_kwh = cost_weekday_offpeak + cost_weekend_offpeak
+total_cost = cost_total_peak_kwh + cost_total_off_peak_kwh
+
+# 5. Display Summary Table
+# ... your summary_df creation and st.dataframe(summary_df) code here ...
+
 
 if not WEEKEND_HAS_PEAK_RATE:
     daily_summary_df.loc[is_weekend_or_holiday, 'plotted_kwh_off_peak'] += daily_summary_df.loc[is_weekend_or_holiday, 'plotted_kwh_peak']
