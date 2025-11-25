@@ -8,11 +8,29 @@ import holidays
 import matplotlib.pyplot as plt
 import seaborn as sns
 from os import path, makedirs
+import hmac
 
-# Login
-password = st.text_input("Enter password", type="password")
-if password != "1112":
-    st.stop()
+# Get the password the user entered from the text input widget
+entered_password = st.text_input("🔑 Enter password", type="password")
+
+# Securely check if the entered password matches the secret
+# Note: st.secrets["app_password"] is used here, matching the structure in option 2.
+if entered_password: # Only proceed if the user has typed something
+    
+    # hmac.compare_digest returns True if they match
+    if hmac.compare_digest(entered_password, st.secrets["app_password"]):
+        # Passwords match: Show the content
+        st.success("Access Granted!")
+        
+        # --- Start of Secured Content ---
+        st.title("Welcome to the Private Dashboard")
+        st.write("This content is only visible after a successful login.")
+        # --- End of Secured Content ---
+        
+    else:
+        # Passwords don't match: Show error and stop execution
+        st.error("😕 Password incorrect")
+        st.stop() # Prevents the rest of the app from running
 
 # --- Define Date Window Parameters, Price Rates, and Holidays ---
 START_DATE = '2025-11-01'
