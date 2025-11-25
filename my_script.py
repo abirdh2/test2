@@ -426,14 +426,7 @@ off_peak_label = 'Off-Peak (22-17) kWh'
 if not WEEKEND_HAS_PEAK_RATE:
     peak_label = 'Peak (Weekday Only) kWh'
     off_peak_label = 'Off-Peak (Includes Weekend/Holiday) kWh'
-
-# Calculate the summary values
-total_kwh_overall = daily_summary_df['total_kwh'].sum()
-total_peak_kwh = daily_summary_df['plotted_kwh_peak'].sum()
-total_off_peak_kwh = daily_summary_df['plotted_kwh_off_peak'].sum()
-cost_total_peak_kwh = report['cost_weekday_17_22'].sum()
-cost_total_off_peak_kwh = report['cost_weekday_22_17'].sum() + report['cost_weekend_holiday_off_peak'].sum()
-total_cost = report['Total_Cost'].sum()
+    
 
 # --- Aggregated Consumption and Cost Summary (Visualized) ---
 summary_data = {
