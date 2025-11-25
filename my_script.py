@@ -286,7 +286,7 @@ is_weekend_or_holiday = is_weekend | is_holiday
 
 
 # --- Sidebar filters ---
-st.sidebar.markdown("### 📅 Date")
+st.sidebar.markdown("### 📅  Date")
 
 START_DATE = st.sidebar.date_input(
     "Start Date", 
@@ -698,7 +698,7 @@ ax2.set_title('Cost Breakdown: Peak vs Off-Peak')
 
 # Annotate individual bars
 for i, v in enumerate(data_cost):
-    ax2.text(i, v + 0.5, f"₪ {v:.2f}", ha='center', va='bottom', fontsize=10)
+    ax2.text(i, v + 0.5, f"{v:.2f}", ha='center', va='bottom', fontsize=10)
 
 # Set Y-limit to ensure space for annotations
 # Use the combined total + a buffer
