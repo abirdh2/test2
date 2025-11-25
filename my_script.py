@@ -18,7 +18,7 @@ entered_password = st.text_input("🔑 Enter password", type="password")
 if entered_password: # Only proceed if the user has typed something
     
     # hmac.compare_digest returns True if they match
-    if hmac.compare_digest(entered_password, st.secrets["app_password"]):
+    if hmac.compare_digest(entered_password, st.secrets["pass"]["app_password"]):
         # Passwords match: Show the content
         st.success("Access Granted!")
         
