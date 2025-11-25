@@ -14,8 +14,12 @@ import hmac
 entered_password = st.text_input("🔑 Enter password", type="password")
 
 # 2. Retrieve the stored secret safely
-# Use .get() to avoid errors if the key isn't found
-stored_secret = st.secrets.get("app_password")
+try:
+    stored_secret = st.secrets["pass"]["app_password"]
+except KeyError:
+    # Handle the configuration error if the secret isn't found
+    st.error("🚨 Configuration Error: The secret 'pass.app_password' was not found in secrets.toml.")
+    st.stop()
 
 # 3. Check if the user has entered anything AND if the secret was retrieved
 # We don't want to show the error immediately on load, only after an attempt.
