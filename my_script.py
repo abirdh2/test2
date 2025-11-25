@@ -597,41 +597,72 @@ st.subheader("Aggregated Consumption and Cost Summary")
 st.dataframe(summary_df)
 
 # --- Visualize Totals ---
-fig, ax = plt.subplots(figsize=(8, 5))
-ax.bar(['Peak kWh', 'Off-Peak kWh'], [total_peak_kwh, total_off_peak_kwh], color=['lightcoral', 'lightgreen'], label='kWh')
-ax.set_ylabel('Total Energy (kWh)')
-ax.set_title('Peak vs Off-Peak Energy Consumption')
+fig, ax = plt.subplots(figsize=(12, 6))
+sns.set_theme(style="whitegrid")
 
+x_pos = daily_hourly_data['hour_local']
+width = 0.8
 
-for i, v in enumerate([total_peak_kwh, total_off_peak_kwh]):
-    ax.text(i, v + 0.5, f"{v:.2f}", ha='center', va='bottom', fontsize=10)
+peak_label_current_day = 'Peak (17-22) kWh'
+off_peak_label_current_day = 'Off-Peak (22-17) kWh'
+if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
+    peak_label_current_day = 'Peak (Weekday Only) kWh'
+    off_peak_label_current_day = 'Off-Peak (Includes Weekend/Holiday) kWh'
 
-# Add combined total value above the two bars
-combined_total_kwh = total_peak_kwh + total_off_peak_kwh
-ax.text(0.5, combined_total_kwh + 1, f"Total: {combined_total_kwh:.2f} kWh", ha='center', va='bottom', fontsize=12, fontweight='bold')
+ax.bar(x_pos, daily_hourly_data['kwh_off_peak'], color='lightgreen',
+       width=width, edgecolor='white', label=off_peak_label_current_day)
+ax.bar(x_pos, daily_hourly_data['kwh_peak'], bottom=daily_hourly_data['kwh_off_peak'],
+       color='lightcoral', width=width, edgecolor='white', label=peak_label_current_day)
 
+ax.set_xlabel('Hour of Day (Local Time)', fontsize=12)
+ax.set_ylabel('Energy Consumption (kWh)', fontsize=12)
 
+title_suffix = ''
+if is_current_day_weekend_or_holiday:
+    title_suffix = ' (Weekend/Holiday Treated as Off-Peak)' if not WEEKEND_HAS_PEAK_RATE else ' (Weekend/Holiday with Peak Rates)'
+ax.set_title(
+    f'Hourly Energy Consumption for {date_normalized.strftime("%Y-%m-%d")}{title_suffix}',
+    fontsize=14,
+    pad=20  # adds space above title
+)
+
+ax.set_xticks(range(24))
+ax.set_xticklabels(range(24), rotation=0, fontsize=10)
+ax.legend()
+ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+max_kwh_for_day = daily_hourly_data['delta_kwh'].max()
+ax.set_ylim(0, max_kwh_for_day * 1.25 if max_kwh_for_day > 0 else 1)
+
+# Add top margin so labels don't overlap
+ax.margins(y=0.10)
+
+# Annotate bars with more spacing
+for hour, total_kwh in daily_hourly_data[['hour_local', 'delta_kwh']].values:
+    if total_kwh > 0:
+        ax.text(
+            hour, total_kwh + (max_kwh_for_day * 0.05),
+            f"{total_kwh:.2f}",
+            ha='center', va='bottom',
+            fontsize=9
+        )
+
+# Additional spacing around whole figure
+plt.subplots_adjust(top=0.90)
 plt.tight_layout()
+
+folder_hourly = f"from_{START_DATE}_to_{END_DATE}"
+if not path.exists(folder_hourly):
+    makedirs(folder_hourly)
+
+plt.savefig(
+    f'{folder_hourly}/hourly_consumption_{date_normalized.strftime("%Y-%m-%d")}.png',
+    bbox_inches="tight"
+)
+
 st.pyplot(fig)
+plt.close(fig)
 
-fig2, ax2 = plt.subplots(figsize=(8, 5))
-ax2.bar(['Peak Cost', 'Off-Peak Cost'], [cost_total_peak_kwh, cost_total_off_peak_kwh], color=['salmon', 'lightblue'], label='Cost')
-
-ax2.set_ylabel('Total Cost (₪)')
-ax2.set_title('Cost Breakdown: Peak vs Off-Peak')
-
-
-for i, v in enumerate([cost_total_peak_kwh, cost_total_off_peak_kwh]):
-    ax2.text(i, v + 0.5, f"₪ {v:.2f}", ha='center', va='bottom', fontsize=10)
-
-# Add combined total cost above the two bars
-combined_total_cost = cost_total_peak_kwh + cost_total_off_peak_kwh
-ax2.text(0.5, combined_total_cost + 1, f"Total: ₪ {combined_total_cost:.2f}", ha='center', va='bottom', fontsize=12, fontweight='bold')
-
-
-
-plt.tight_layout()
-st.pyplot(fig2)
 
 
 # print("Hourly plots generated for each day in the filtered range.") # Commented out logging print
