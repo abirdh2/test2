@@ -10,6 +10,15 @@ import seaborn as sns
 from os import path, makedirs
 import hmac
 
+
+st.set_page_config(
+    layout="wide", # Use the full width of the browser
+    initial_sidebar_state="expanded",
+)
+
+st.title("⚡ Car Energy Consumption and Cost Analyzer")
+st.subheader("Ha'sharon 24 St. Apt 30")
+
 try:
     stored_secret = st.secrets["pass"]["app_password"]
 except KeyError:
@@ -114,7 +123,7 @@ SELECT
 FROM raw_data
 """)
 
-# --- NEW: View for Raw Hourly Presence Check ---
+# --- View for Raw Hourly Presence Check ---
 # This view identifies if a raw measurement exists for each hour, regardless of delta calculation
 conn.execute("DROP VIEW IF EXISTS raw_hourly_presence")
 conn.execute("""
@@ -469,7 +478,7 @@ summary_data = {
 }
 summary_df = pd.DataFrame(summary_data)
 
-print("\n--- Aggregated Consumption and Cost Summary ---")
+print("\n--- Consumption and Cost Summary ---")
 print(summary_df)
 
 
@@ -506,7 +515,7 @@ summary_data = {
     ]
 }
 summary_df = pd.DataFrame(summary_data)
-st.subheader("Aggregated Consumption and Cost Summary")
+st.subheader("Consumption and Cost Summary")
 st.dataframe(summary_df)
 
 # --- Daily Summary Plot ---
@@ -548,135 +557,6 @@ if not path.exists(folder_daily):
 plt.savefig(f'{folder_daily}/daily_energy_consumption.png')
 st.pyplot(fig)
 plt.close(fig)
-
-############
-
-# --- Load hourly data from SQLite ---
-with sqlite3.connect("energy_data.db") as conn_hourly:
-    hourly_df = pd.read_sql_query("SELECT * FROM hourly_deltas", conn_hourly)
-
-# Ensure date_local is datetime and hour_local numeric
-hourly_df['date_local'] = pd.to_datetime(hourly_df['date_local'])
-hourly_df['hour_local'] = pd.to_numeric(hourly_df['hour_local'], errors='coerce')
-
-# Filter by selected date range
-hourly_df_filtered = hourly_df[
-    (hourly_df['date_local'] >= pd.to_datetime(START_DATE)) &
-    (hourly_df['date_local'] <= pd.to_datetime(END_DATE))
-].copy()
-
-# Limit to first 31 unique days if needed
-unique_days = hourly_df_filtered['date_local'].dt.normalize().unique()
-if len(unique_days) > 31:
-    days_to_keep = pd.Series(unique_days).sort_values().head(31).tolist()
-    hourly_df_plot = hourly_df_filtered[hourly_df_filtered['date_local'].dt.normalize().isin(days_to_keep)].copy()
-else:
-    hourly_df_plot = hourly_df_filtered.copy()
-
-# --- Normalize holiday series once ---
-holidays_normalized = holidays_series.dt.normalize()
-
-# --- Generate Hourly Plots ---
-unique_dates_to_plot = hourly_df_plot['date_local'].dt.normalize().unique()
-
-for date in sorted(unique_dates_to_plot):
-    date_normalized = pd.to_datetime(date).normalize()
-    daily_hourly_data = hourly_df_plot[hourly_df_plot['date_local'].dt.normalize() == date_normalized].copy()
-    daily_hourly_data = daily_hourly_data.sort_values(by='hour_local')
-
-    # Determine weekend and holiday
-    is_current_day_weekend = (date.weekday() >= 5)
-    is_current_day_holiday = date_normalized in holidays_normalized.values
-    is_current_day_weekend_or_holiday = is_current_day_weekend or is_current_day_holiday
-
-    # Calculate peak/off-peak kWh
-    if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
-        daily_hourly_data['kwh_peak'] = 0
-        daily_hourly_data['kwh_off_peak'] = daily_hourly_data['delta_kwh']
-    else:
-        daily_hourly_data['kwh_peak'] = daily_hourly_data.apply(
-            lambda row: row['delta_kwh'] if 17 <= row['hour_local'] < 22 else 0, axis=1)
-        daily_hourly_data['kwh_off_peak'] = daily_hourly_data['delta_kwh'] - daily_hourly_data['kwh_peak']
-
-    daily_hourly_data.fillna(0, inplace=True)
-
-    # --- Plot ---
-    fig, ax = plt.subplots(figsize=(12, 6))
-    sns.set_theme(style="whitegrid")
-
-    x_pos = daily_hourly_data['hour_local']
-    width = 0.8
-
-    peak_label_current_day = 'Peak (17-22) kWh'
-    off_peak_label_current_day = 'Off-Peak (22-17) kWh'
-    if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
-        peak_label_current_day = 'Peak (Weekday Only) kWh'
-        off_peak_label_current_day = 'Off-Peak (Includes Weekend/Holiday) kWh'
-
-    ax.bar(x_pos, daily_hourly_data['kwh_off_peak'], color='lightgreen', width=width, edgecolor='white', label=off_peak_label_current_day)
-    ax.bar(x_pos, daily_hourly_data['kwh_peak'], bottom=daily_hourly_data['kwh_off_peak'], color='lightcoral', width=width, edgecolor='white', label=peak_label_current_day)
-
-    ax.set_xlabel('Hour of Day (Local Time)', fontsize=12)
-    ax.set_ylabel('Energy Consumption (kWh)', fontsize=12)
-
-    title_suffix = ''
-    if is_current_day_weekend_or_holiday:
-        title_suffix = ' (Weekend/Holiday Treated as Off-Peak)' if not WEEKEND_HAS_PEAK_RATE else ' (Weekend/Holiday with Peak Rates)'
-    ax.set_title(f'Hourly Energy Consumption for {date_normalized.strftime("%Y-%m-%d")}{title_suffix}', fontsize=14)
-    ax.set_xticks(range(24))
-    ax.legend()
-    ax.grid(axis='y', linestyle='--', alpha=0.7)
-
-    max_kwh_for_day = daily_hourly_data['delta_kwh'].max()
-    ax.set_ylim(0, max_kwh_for_day * 1.15 if max_kwh_for_day > 0 else 1)
-
-    # Annotate bars
-    for i, (hour, total_kwh) in enumerate(daily_hourly_data[['hour_local', 'delta_kwh']].values):
-        if total_kwh > 0:
-            ax.text(hour, total_kwh + (max_kwh_for_day * 0.02), f"{total_kwh:.2f}", ha='center', va='bottom', color='black', fontsize=8)
-
-    plt.tight_layout()
-    folder_hourly = f"from_{START_DATE}_to_{END_DATE}"
-    if not path.exists(folder_hourly):
-        makedirs(folder_hourly)
-    plt.savefig(f'{folder_hourly}/hourly_consumption_{date_normalized.strftime("%Y-%m-%d")}.png')
-
-    st.pyplot(fig)
-    plt.close(fig)
-
-# --- Sidebar: Date Range ---
-with sqlite3.connect("energy_data.db") as conn:
-    daily_summary_df = pd.read_sql_query("SELECT * FROM daily_summary", conn)
-daily_summary_df['date_local'] = pd.to_datetime(daily_summary_df['date_local'])
-
-# START_DATE = st.sidebar.date_input("Start Date", daily_summary_df['date_local'].min())
-# END_DATE = st.sidebar.date_input("End Date", daily_summary_df['date_local'].max())
-
-# Filter daily summary by date
-daily_summary_df = daily_summary_df[
-    (daily_summary_df['date_local'] >= pd.to_datetime(START_DATE)) &
-    (daily_summary_df['date_local'] <= pd.to_datetime(END_DATE))
-].copy()
-
-# --- Compute Totals ---
-daily_summary_df['plotted_kwh_peak'] = daily_summary_df['kwh_17_22']
-daily_summary_df['plotted_kwh_off_peak'] = daily_summary_df['kwh_22_17']
-
-if not WEEKEND_HAS_PEAK_RATE:
-    # Treat weekends/off-holidays as off-peak
-    is_weekend_or_holiday = daily_summary_df['date_local'].dt.weekday >= 5  # simple weekend flag
-    daily_summary_df.loc[is_weekend_or_holiday, 'plotted_kwh_off_peak'] += daily_summary_df.loc[is_weekend_or_holiday, 'plotted_kwh_peak']
-    daily_summary_df.loc[is_weekend_or_holiday, 'plotted_kwh_peak'] = 0
-
-
-# --- Compute Costs based on sidebar rates ---
-# cost_total_peak_kwh = total_peak_kwh * WEEKDAY_PEAK_RATE
-# cost_total_off_peak_kwh = total_off_peak_kwh * WEEKDAY_OFFPEAK_RATE
-# if WEEKEND_HAS_PEAK_RATE:
-#     cost_total_peak_kwh += total_peak_kwh * WEEKEND_PEAK_RATE
-#     cost_total_off_peak_kwh += total_off_peak_kwh * WEEKEND_OFFPEAK_RATE
-
-# total_cost = cost_total_peak_kwh + cost_total_off_peak_kwh
 
 # --- Visualize Totals ---
 # --- kWh Plot ---
@@ -732,9 +612,106 @@ ax2.text(0.5, combined_total_cost + (y_max_cost * 0.05), # Adjusted V position
 
 plt.tight_layout()
 st.pyplot(fig2)
-# plt.close(fig2) # Optional: good practice to close figures
+plt.close(fig2)
 
-# print("Hourly plots generated for each day in the filtered range.") # Commented out logging print
+############
+
+
+if st.checkbox('Show daily Graphs'):
+
+    # --- Load hourly data from SQLite ---
+    with sqlite3.connect("energy_data.db") as conn_hourly:
+        hourly_df = pd.read_sql_query("SELECT * FROM hourly_deltas", conn_hourly)
+
+    # Ensure date_local is datetime and hour_local numeric
+    hourly_df['date_local'] = pd.to_datetime(hourly_df['date_local'])
+    hourly_df['hour_local'] = pd.to_numeric(hourly_df['hour_local'], errors='coerce')
+
+    # Filter by selected date range
+    hourly_df_filtered = hourly_df[
+        (hourly_df['date_local'] >= pd.to_datetime(START_DATE)) &
+        (hourly_df['date_local'] <= pd.to_datetime(END_DATE))
+    ].copy()
+
+    # Limit to first 31 unique days if needed
+    unique_days = hourly_df_filtered['date_local'].dt.normalize().unique()
+    if len(unique_days) > 31:
+        days_to_keep = pd.Series(unique_days).sort_values().head(31).tolist()
+        hourly_df_plot = hourly_df_filtered[hourly_df_filtered['date_local'].dt.normalize().isin(days_to_keep)].copy()
+    else:
+        hourly_df_plot = hourly_df_filtered.copy()
+
+    # --- Normalize holiday series once ---
+    holidays_normalized = holidays_series.dt.normalize()
+
+    # --- Generate Hourly Plots ---
+    unique_dates_to_plot = hourly_df_plot['date_local'].dt.normalize().unique()
+
+    for date in sorted(unique_dates_to_plot):
+        date_normalized = pd.to_datetime(date).normalize()
+        daily_hourly_data = hourly_df_plot[hourly_df_plot['date_local'].dt.normalize() == date_normalized].copy()
+        daily_hourly_data = daily_hourly_data.sort_values(by='hour_local')
+
+        # Determine weekend and holiday
+        is_current_day_weekend = (date.weekday() >= 5)
+        is_current_day_holiday = date_normalized in holidays_normalized.values
+        is_current_day_weekend_or_holiday = is_current_day_weekend or is_current_day_holiday
+
+        # Calculate peak/off-peak kWh
+        if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
+            daily_hourly_data['kwh_peak'] = 0
+            daily_hourly_data['kwh_off_peak'] = daily_hourly_data['delta_kwh']
+        else:
+            daily_hourly_data['kwh_peak'] = daily_hourly_data.apply(
+                lambda row: row['delta_kwh'] if 17 <= row['hour_local'] < 22 else 0, axis=1)
+            daily_hourly_data['kwh_off_peak'] = daily_hourly_data['delta_kwh'] - daily_hourly_data['kwh_peak']
+
+        daily_hourly_data.fillna(0, inplace=True)
+
+        # --- Plot ---
+        fig, ax = plt.subplots(figsize=(12, 6))
+        sns.set_theme(style="whitegrid")
+
+        x_pos = daily_hourly_data['hour_local']
+        width = 0.8
+
+        peak_label_current_day = 'Peak (17-22) kWh'
+        off_peak_label_current_day = 'Off-Peak (22-17) kWh'
+        if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
+            peak_label_current_day = 'Peak (Weekday Only) kWh'
+            off_peak_label_current_day = 'Off-Peak (Includes Weekend/Holiday) kWh'
+
+        ax.bar(x_pos, daily_hourly_data['kwh_off_peak'], color='lightgreen', width=width, edgecolor='white', label=off_peak_label_current_day)
+        ax.bar(x_pos, daily_hourly_data['kwh_peak'], bottom=daily_hourly_data['kwh_off_peak'], color='lightcoral', width=width, edgecolor='white', label=peak_label_current_day)
+
+        ax.set_xlabel('Hour of Day (Local Time)', fontsize=12)
+        ax.set_ylabel('Energy Consumption (kWh)', fontsize=12)
+
+        title_suffix = ''
+        if is_current_day_weekend_or_holiday:
+            title_suffix = ' (Weekend/Holiday Treated as Off-Peak)' if not WEEKEND_HAS_PEAK_RATE else ' (Weekend/Holiday with Peak Rates)'
+        ax.set_title(f'Hourly Energy Consumption for {date_normalized.strftime("%Y-%m-%d")}{title_suffix}', fontsize=14)
+        ax.set_xticks(range(24))
+        ax.legend()
+        ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+        max_kwh_for_day = daily_hourly_data['delta_kwh'].max()
+        ax.set_ylim(0, max_kwh_for_day * 1.15 if max_kwh_for_day > 0 else 1)
+
+        # Annotate bars
+        for i, (hour, total_kwh) in enumerate(daily_hourly_data[['hour_local', 'delta_kwh']].values):
+            if total_kwh > 0:
+                ax.text(hour, total_kwh + (max_kwh_for_day * 0.02), f"{total_kwh:.2f}", ha='center', va='bottom', color='black', fontsize=8)
+
+        plt.tight_layout()
+        folder_hourly = f"from_{START_DATE}_to_{END_DATE}"
+        if not path.exists(folder_hourly):
+            makedirs(folder_hourly)
+        plt.savefig(f'{folder_hourly}/hourly_consumption_{date_normalized.strftime("%Y-%m-%d")}.png')
+
+        st.pyplot(fig)
+        plt.close(fig)
+
 
 # Close the initial connection
 if 'conn' in locals() and conn:
