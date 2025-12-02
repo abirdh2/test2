@@ -9,10 +9,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from os import path, makedirs
 import hmac
+from io import BytesIO
+import zipfile
+from datetime import date
 
 
 st.set_page_config(
-    layout="wide", # Use the full width of the browser
+    # layout="wide", # Use the full width of the browser
     initial_sidebar_state="expanded",
 )
 
@@ -43,14 +46,6 @@ if entered_password:
 else:
     st.stop()
 
-# --- Define Date Window Parameters, Price Rates, and Holidays ---
-START_DATE = '2025-11-01'
-END_DATE = '2025-11-30'
-
-WEEKDAY_PEAK_RATE_DEFAULT = 0.4977
-WEEKDAY_OFFPEAK_RATE_DEFAULT = 0.446
-WEEKEND_PEAK_RATE_DEFAULT = 0.4977
-WEEKEND_OFFPEAK_RATE_DEFAULT = 0.446
 WEEKEND_HAS_PEAK_RATE = False # Explicitly set as False
 CHECK_MISSINIG_HOURS = True
 
@@ -198,110 +193,6 @@ with sqlite3.connect("energy_data.db") as conn_summary:
     report_daily_summary = pd.read_sql_query("SELECT * FROM daily_summary", conn_summary)
 
 
-# --- 6. Calculate Aggregated Consumption and Costs ---
-base_query_parts = []
-cost_columns_to_sum = []
-
-base_query_parts.append(f"""
-    SUM(CASE
-        WHEN CAST(STRFTIME('%w', T1.date_local) AS INTEGER) NOT IN (5, 6) AND
-             T1.date_local NOT IN (SELECT holiday_date FROM holidays)
-        THEN T1.kwh_17_22
-        ELSE 0
-    END) AS weekday_kwh_17_22,
-
-    SUM(CASE
-        WHEN CAST(STRFTIME('%w', T1.date_local) AS INTEGER) NOT IN (5, 6) AND
-             T1.date_local NOT IN (SELECT holiday_date FROM holidays)
-        THEN T1.kwh_17_22
-        ELSE 0
-    END) * {WEEKDAY_PEAK_RATE_DEFAULT} AS cost_weekday_17_22,
-
-
-    SUM(CASE
-        WHEN CAST(STRFTIME('%w', T1.date_local) AS INTEGER) NOT IN (5, 6) AND
-             T1.date_local NOT IN (SELECT holiday_date FROM holidays)
-        THEN T1.kwh_22_17
-        ELSE 0
-    END) AS weekday_kwh_22_17,
-
-    SUM(CASE
-        WHEN CAST(STRFTIME('%w', T1.date_local) AS INTEGER) NOT IN (5, 6) AND
-             T1.date_local NOT IN (SELECT holiday_date FROM holidays)
-        THEN T1.kwh_22_17
-        ELSE 0
-    END) * {WEEKDAY_OFFPEAK_RATE_DEFAULT} AS cost_weekday_22_17
-""")
-cost_columns_to_sum.extend(['cost_weekday_17_22', 'cost_weekday_22_17'])
-
-
-if WEEKEND_HAS_PEAK_RATE:
-    base_query_parts.append(f"""
-    SUM(CASE
-        WHEN CAST(STRFTIME('%w', T1.date_local) AS INTEGER) IN (5, 6) OR
-             T1.date_local IN (SELECT holiday_date FROM holidays)
-        THEN T1.kwh_17_22
-        ELSE 0
-    END) AS weekend_holiday_kwh_17_22,
-
-    SUM(CASE
-        WHEN CAST(STRFTIME('%w', T1.date_local) AS INTEGER) IN (5, 6) OR
-             T1.date_local IN (SELECT holiday_date FROM holidays)
-        THEN T1.kwh_17_22
-        ELSE 0
-    END) * {WEEKEND_PEAK_RATE_DEFAULT} AS cost_weekend_holiday_17_22,
-
-
-    SUM(CASE
-        WHEN CAST(STRFTIME('%w', T1.date_local) AS INTEGER) IN (5, 6) OR
-             T1.date_local IN (SELECT holiday_date FROM holidays)
-        THEN T1.kwh_22_17
-        ELSE 0
-    END) AS weekend_holiday_kwh_22_17,
-
-    SUM(CASE
-        WHEN CAST(STRFTIME('%w', T1.date_local) AS INTEGER) IN (5, 6) OR
-             T1.date_local IN (SELECT holiday_date FROM holidays)
-        THEN T1.kwh_22_17
-        ELSE 0
-    END) * {WEEKEND_OFFPEAK_RATE_DEFAULT} AS cost_weekend_holiday_22_17
-""")
-    cost_columns_to_sum.extend(['cost_weekend_holiday_17_22', 'cost_weekend_holiday_22_17'])
-else:
-    base_query_parts.append(f"""
-    SUM(CASE
-        WHEN CAST(STRFTIME('%w', T1.date_local) AS INTEGER) IN (5, 6) OR
-             T1.date_local IN (SELECT holiday_date FROM holidays)
-        THEN T1.kwh_17_22 + T1.kwh_22_17
-        ELSE 0
-    END) AS weekend_holiday_kwh_off_peak,
-
-    SUM(CASE
-        WHEN CAST(STRFTIME('%w', T1.date_local) AS INTEGER) IN (5, 6) OR
-             T1.date_local IN (SELECT holiday_date FROM holidays)
-        THEN T1.kwh_17_22 + T1.kwh_22_17
-        ELSE 0
-    END) * {WEEKEND_OFFPEAK_RATE_DEFAULT} AS cost_weekend_holiday_off_peak
-""")
-    cost_columns_to_sum.append('cost_weekend_holiday_off_peak')
-
-query = f"""
-SELECT
-    {','.join(base_query_parts)}
-FROM daily_summary T1
-WHERE T1.date_local BETWEEN '{START_DATE}' AND '{END_DATE}'
-"""
-
-with sqlite3.connect("energy_data.db") as conn_report:
-    report = pd.read_sql_query(query, conn_report)
-# print("--- Consumption and Total Cost Summary ---") # Commented out logging print
-# print(report) # Commented out logging print
-
-report['Total_Cost'] = sum(report[col] for col in cost_columns_to_sum)
-
-# print("\n--- Grand Total Cost (Aggregated) ---") # Commented out logging print
-# print(f"Total Consumption Cost: {report['Total_Cost'].sum():.2f}") # Commented out logging print
-
 # --- 7. Generate Daily Summary Plot ---
 daily_summary_df = report_daily_summary.copy()
 daily_summary_df['date_local'] = pd.to_datetime(daily_summary_df['date_local'])
@@ -319,16 +210,78 @@ st.sidebar.markdown("### 📅  Date")
 
 START_DATE = st.sidebar.date_input(
     "Start Date", 
-    daily_summary_df['date_local'].min(),
+    date.today().replace(day=1),
     key="start_date_input"
 )
 END_DATE = st.sidebar.date_input(
     "End Date", 
-    daily_summary_df['date_local'].max(),
+    date.today(),
     key="end_date_input"
 )
+# Convert to datetime objects for easy month comparison
+start_dt = pd.to_datetime(START_DATE)
+end_dt = pd.to_datetime(END_DATE)
+
+
+# --- Validation Logic ---
+
+# Check if the year or month of the two dates are different
+if start_dt.year != end_dt.year or start_dt.month != end_dt.month:
+    
+    st.error(
+        "🚨 **Selection Error:** The selected date range must be within the same calendar month. "
+        "Please adjust your Start Date and End Date."
+    )
+    
+    # Optionally, stop the rest of your app from running until the dates are corrected
+    st.stop()
+    
+# If the validation passes, the rest of your script will execute
+else:
+    st.sidebar.success("✅ Dates are valid for processing.")
+    # Proceed with your plotting/analysis using START_DATE and END_DATE
+
 
 st.sidebar.markdown("### ⚡ Electricity Rates")
+
+RATE_CONFIG = {
+    # Summer Months (6, 7, 8, 9)
+    6: {'wd_peak': 1.6895, 'wd_offpeak': 0.5283, 'we_peak': 0.5283, 'we_offpeak': 0.5283},
+    7: {'wd_peak': 1.6895, 'wd_offpeak': 0.5283, 'we_peak': 0.5283, 'we_offpeak': 0.5283},
+    8: {'wd_peak': 1.6895, 'wd_offpeak': 0.5283, 'we_peak': 0.5283, 'we_offpeak': 0.5283},
+    9: {'wd_peak': 1.6895, 'wd_offpeak': 0.5283, 'we_peak': 0.5283, 'we_offpeak': 0.5283},
+    
+    # Winter Months (12, 1, 2)
+    12: {'wd_peak': 1.2071, 'wd_offpeak': 0.4557, 'we_peak': 1.2071, 'we_offpeak': 0.4557},
+    1: {'wd_peak': 1.2071, 'wd_offpeak': 0.4557, 'we_peak': 1.2071, 'we_offpeak': 0.4557},
+    2: {'wd_peak': 1.2071, 'wd_offpeak': 0.4557, 'we_peak': 1.2071, 'we_offpeak': 0.4557},
+    
+    # Spring/Fall Months (3, 4, 5, 10, 11) - Note: Rates match the Winter season in your spec
+    3: {'wd_peak': 0.4977, 'wd_offpeak': 0.446, 'we_peak': 0.446, 'we_offpeak': 0.446},
+    4: {'wd_peak': 0.4977, 'wd_offpeak': 0.446, 'we_peak': 0.446, 'we_offpeak': 0.446},
+    5: {'wd_peak': 0.4977, 'wd_offpeak': 0.446, 'we_peak': 0.446, 'we_offpeak': 0.446},
+    10: {'wd_peak': 0.4977, 'wd_offpeak': 0.446, 'we_peak': 0.446, 'we_offpeak': 0.446},
+    11: {'wd_peak': 0.4977, 'wd_offpeak': 0.446, 'we_peak': 0.446, 'we_offpeak': 0.446},
+}
+
+# --- 🎯 Rate Adjustment Logic ---
+
+# Get the month number from the selected START_DATE
+selected_month = START_DATE.month
+
+# Get the specific rates for the selected month
+rates = RATE_CONFIG[selected_month]
+
+# Update the global variables with the new rates
+WEEKDAY_PEAK_RATE_DEFAULT = rates['wd_peak']
+WEEKDAY_OFFPEAK_RATE_DEFAULT = rates['wd_offpeak']
+WEEKEND_PEAK_RATE_DEFAULT = rates['we_peak']
+WEEKEND_OFFPEAK_RATE_DEFAULT = rates['we_offpeak']
+
+# # Optional: Display the active rate set
+# st.sidebar.markdown(f"**Rate Set:** Month {selected_month} Active")
+# st.sidebar.caption(f"Wkday Peak: ${WEEKDAY_PEAK_RATE_DEFAULT}")
+
 
 WEEKDAY_PEAK_RATE = st.sidebar.number_input(
     "Weekday Peak Rate (₪/kWh)",
@@ -647,70 +600,140 @@ if st.checkbox('Show daily Graphs'):
     # --- Generate Hourly Plots ---
     unique_dates_to_plot = hourly_df_plot['date_local'].dt.normalize().unique()
 
-    for date in sorted(unique_dates_to_plot):
-        date_normalized = pd.to_datetime(date).normalize()
-        daily_hourly_data = hourly_df_plot[hourly_df_plot['date_local'].dt.normalize() == date_normalized].copy()
-        daily_hourly_data = daily_hourly_data.sort_values(by='hour_local')
 
-        # Determine weekend and holiday
-        is_current_day_weekend = (date.weekday() >= 5)
-        is_current_day_holiday = date_normalized in holidays_normalized.values
-        is_current_day_weekend_or_holiday = is_current_day_weekend or is_current_day_holiday
+    # Initialize a BytesIO object to hold the ZIP file in memory
+    zip_buffer = BytesIO()
 
-        # Calculate peak/off-peak kWh
-        if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
-            daily_hourly_data['kwh_peak'] = 0
-            daily_hourly_data['kwh_off_peak'] = daily_hourly_data['delta_kwh']
-        else:
-            daily_hourly_data['kwh_peak'] = daily_hourly_data.apply(
-                lambda row: row['delta_kwh'] if 17 <= row['hour_local'] < 22 else 0, axis=1)
-            daily_hourly_data['kwh_off_peak'] = daily_hourly_data['delta_kwh'] - daily_hourly_data['kwh_peak']
+    # Start the ZIP file context
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Your loop structure starts here
+        for date in sorted(unique_dates_to_plot):
+            date_normalized = pd.to_datetime(date).normalize()
+            daily_hourly_data = hourly_df_plot[hourly_df_plot['date_local'].dt.normalize() == date_normalized].copy()
+            daily_hourly_data = daily_hourly_data.sort_values(by='hour_local')
 
-        daily_hourly_data.fillna(0, inplace=True)
+            # Determine weekend and holiday
+            is_current_day_weekend = (date.weekday() >= 5)
+            is_current_day_holiday = date_normalized in holidays_normalized.values
+            is_current_day_weekend_or_holiday = is_current_day_weekend or is_current_day_holiday
 
-        # --- Plot ---
-        fig, ax = plt.subplots(figsize=(12, 6))
-        sns.set_theme(style="whitegrid")
+            # Calculate peak/off-peak kWh
+            if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
+                daily_hourly_data['kwh_peak'] = 0
+                daily_hourly_data['kwh_off_peak'] = daily_hourly_data['delta_kwh']
+            else:
+                daily_hourly_data['kwh_peak'] = daily_hourly_data.apply(
+                    lambda row: row['delta_kwh'] if 17 <= row['hour_local'] < 22 else 0, axis=1)
+                daily_hourly_data['kwh_off_peak'] = daily_hourly_data['delta_kwh'] - daily_hourly_data['kwh_peak']
 
-        x_pos = daily_hourly_data['hour_local']
-        width = 0.8
+            daily_hourly_data.fillna(0, inplace=True)
 
-        peak_label_current_day = 'Peak (17-22) kWh'
-        off_peak_label_current_day = 'Off-Peak (22-17) kWh'
-        if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
-            peak_label_current_day = 'Peak (Weekday Only) kWh'
-            off_peak_label_current_day = 'Off-Peak (Includes Weekend/Holiday) kWh'
+            # --- Plot ---
+            fig, ax = plt.subplots(figsize=(12, 6))
+            sns.set_theme(style="whitegrid")
 
-        ax.bar(x_pos, daily_hourly_data['kwh_off_peak'], color='lightgreen', width=width, edgecolor='white', label=off_peak_label_current_day)
-        ax.bar(x_pos, daily_hourly_data['kwh_peak'], bottom=daily_hourly_data['kwh_off_peak'], color='lightcoral', width=width, edgecolor='white', label=peak_label_current_day)
+            x_pos = daily_hourly_data['hour_local']
+            width = 0.8
 
-        ax.set_xlabel('Hour of Day (Local Time)', fontsize=12)
-        ax.set_ylabel('Energy Consumption (kWh)', fontsize=12)
+            peak_label_current_day = 'Peak (17-22) kWh'
+            off_peak_label_current_day = 'Off-Peak (22-17) kWh'
+            if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
+                peak_label_current_day = 'Peak (Weekday Only) kWh'
+                off_peak_label_current_day = 'Off-Peak (Includes Weekend/Holiday) kWh'
 
-        title_suffix = ''
-        if is_current_day_weekend_or_holiday:
-            title_suffix = ' (Weekend/Holiday Treated as Off-Peak)' if not WEEKEND_HAS_PEAK_RATE else ' (Weekend/Holiday with Peak Rates)'
-        ax.set_title(f'Hourly Energy Consumption for {date_normalized.strftime("%Y-%m-%d")}{title_suffix}', fontsize=14)
-        ax.set_xticks(range(24))
-        ax.legend()
-        ax.grid(axis='y', linestyle='--', alpha=0.7)
+            ax.bar(x_pos, daily_hourly_data['kwh_off_peak'], color='lightgreen', width=width, edgecolor='white', label=off_peak_label_current_day)
+            ax.bar(x_pos, daily_hourly_data['kwh_peak'], bottom=daily_hourly_data['kwh_off_peak'], color='lightcoral', width=width, edgecolor='white', label=peak_label_current_day)
 
-        max_kwh_for_day = daily_hourly_data['delta_kwh'].max()
-        ax.set_ylim(0, max_kwh_for_day * 1.15 if max_kwh_for_day > 0 else 1)
+            ax.set_xlabel('Hour of Day (Local Time)', fontsize=12)
+            ax.set_ylabel('Energy Consumption (kWh)', fontsize=12)
 
-        # Annotate bars
-        for i, (hour, total_kwh) in enumerate(daily_hourly_data[['hour_local', 'delta_kwh']].values):
-            if total_kwh > 0:
-                ax.text(hour, total_kwh + (max_kwh_for_day * 0.02), f"{total_kwh:.2f}", ha='center', va='bottom', color='black', fontsize=8)
+            title_suffix = ''
+            if is_current_day_weekend_or_holiday:
+                title_suffix = ' (Weekend/Holiday Treated as Off-Peak)' if not WEEKEND_HAS_PEAK_RATE else ' (Weekend/Holiday with Peak Rates)'
+            ax.set_title(f'Hourly Energy Consumption for {date_normalized.strftime("%Y-%m-%d")}{title_suffix}', fontsize=14)
+            ax.set_xticks(range(24))
+            ax.legend()
+            ax.grid(axis='y', linestyle='--', alpha=0.7)
 
-        plt.tight_layout()
-        folder_hourly = f"from_{START_DATE}_to_{END_DATE}"
-        if not path.exists(folder_hourly):
-            makedirs(folder_hourly)
-        plt.savefig(f'{folder_hourly}/hourly_consumption_{date_normalized.strftime("%Y-%m-%d")}.png')
+            max_kwh_for_day = daily_hourly_data['delta_kwh'].max()
+            ax.set_ylim(0, max_kwh_for_day * 1.15 if max_kwh_for_day > 0 else 1)
 
-        st.pyplot(fig)
-        plt.close(fig)
+            # Annotate bars
+            for i, (hour, total_kwh) in enumerate(daily_hourly_data[['hour_local', 'delta_kwh']].values):
+                if total_kwh > 0:
+                    ax.text(hour, total_kwh + (max_kwh_for_day * 0.02), f"{total_kwh:.2f}", ha='center', va='bottom', color='black', fontsize=8)
+
+            plt.tight_layout()
+            folder_hourly = f"from_{START_DATE}_to_{END_DATE}"
+            if not path.exists(folder_hourly):
+                makedirs(folder_hourly)
+
+            # --- Plot ---
+            fig, ax = plt.subplots(figsize=(12, 6))
+            sns.set_theme(style="whitegrid")
+
+            x_pos = daily_hourly_data['hour_local']
+            width = 0.8
+
+            peak_label_current_day = 'Peak (17-22) kWh'
+            off_peak_label_current_day = 'Off-Peak (22-17) kWh'
+            if is_current_day_weekend_or_holiday and not WEEKEND_HAS_PEAK_RATE:
+                peak_label_current_day = 'Peak (Weekday Only) kWh'
+                off_peak_label_current_day = 'Off-Peak (Includes Weekend/Holiday) kWh'
+
+            ax.bar(x_pos, daily_hourly_data['kwh_off_peak'], color='lightgreen', width=width, edgecolor='white', label=off_peak_label_current_day)
+            ax.bar(x_pos, daily_hourly_data['kwh_peak'], bottom=daily_hourly_data['kwh_off_peak'], color='lightcoral', width=width, edgecolor='white', label=peak_label_current_day)
+
+            ax.set_xlabel('Hour of Day (Local Time)', fontsize=12)
+            ax.set_ylabel('Energy Consumption (kWh)', fontsize=12)
+
+            title_suffix = ''
+            if is_current_day_weekend_or_holiday:
+                title_suffix = ' (Weekend/Holiday Treated as Off-Peak)' if not WEEKEND_HAS_PEAK_RATE else ' (Weekend/Holiday with Peak Rates)'
+            ax.set_title(f'Hourly Energy Consumption for {date_normalized.strftime("%Y-%m-%d")}{title_suffix}', fontsize=14)
+            ax.set_xticks(range(24))
+            ax.legend()
+            ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+            max_kwh_for_day = daily_hourly_data['delta_kwh'].max()
+            ax.set_ylim(0, max_kwh_for_day * 1.15 if max_kwh_for_day > 0 else 1)
+
+            # Annotate bars
+            for i, (hour, total_kwh) in enumerate(daily_hourly_data[['hour_local', 'delta_kwh']].values):
+                if total_kwh > 0:
+                    ax.text(hour, total_kwh + (max_kwh_for_day * 0.02), f"{total_kwh:.2f}", ha='center', va='bottom', color='black', fontsize=8)
+            
+            plt.tight_layout()
+            
+            # Display the plot in the app (required for viewing)
+            st.pyplot(fig)
+            
+            # --- Save Figure to Memory for Zipping ---
+            
+            # 1. Create a buffer for the single plot's PNG data
+            plot_buffer = BytesIO()
+            # 2. Save the figure to the plot buffer
+            fig.savefig(plot_buffer, format="png")
+            plot_buffer.seek(0) # Rewind the buffer
+            
+            # 3. Define the filename for this specific plot inside the ZIP
+            filename = f'hourly_consumption_{date_normalized.strftime("%Y-%m-%d")}.png'
+            
+            # 4. Add the plot's data to the ZIP file
+            zip_file.writestr(filename, plot_buffer.read())
+            
+            # Close the figure to free up memory
+            plt.close(fig)
+
+    # --- Create the Single Download Button OUTSIDE the Loop ---
+    st.markdown("---")
+    st.download_button(
+        label="⬇️ Download All Plots as ZIP",
+        data=zip_buffer.getvalue(), # Get the byte content of the entire ZIP file
+        file_name=f'all_hourly_consumption_from_{START_DATE}_to_{END_DATE}.zip',
+        mime="application/zip"
+    )
+
 
 
 # Close the initial connection
