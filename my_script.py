@@ -80,6 +80,18 @@ worksheet = spreadsheet.get_worksheet_by_id(17794472) # Access the first sheet/t
 data = worksheet.get_all_values()
 
 df = pd.DataFrame(data[1:], columns=data[0])
+
+# Use Pandas to convert the DataFrame directly to CSV string
+csv_output = df.to_csv(index=False)
+
+# Option to download raw data:
+st.download_button(
+    label="⬇️ Download raw data as CSV",
+    data=csv_output,
+    file_name='car_energy_raw_data_pandas.csv',
+    mime='text/csv',
+)
+
 # Ensure proper data types
 df["received_at_utc"] = pd.to_datetime(df["received_at_utc"])
 
