@@ -553,31 +553,31 @@ st.pyplot(fig)
 plt.close(fig) # Optional: good practice to close figures
 
 # --- Cost Plot ---
-fig2, ax2 = plt.subplots(figsize=(8, 5))
-data_cost = [cost_total_peak_kwh, cost_total_off_peak_kwh]
-combined_total_cost = sum(data_cost)
+# fig2, ax2 = plt.subplots(figsize=(8, 5))
+# data_cost = [cost_total_peak_kwh, cost_total_off_peak_kwh]
+# combined_total_cost = sum(data_cost)
 
-ax2.bar(['Peak Cost', 'Off-Peak Cost'], data_cost, color=['salmon', 'lightblue'], label='Cost')
-ax2.set_ylabel('Total Cost (₪)')
-ax2.set_title('Cost Breakdown: Peak vs Off-Peak')
+# ax2.bar(['Peak Cost', 'Off-Peak Cost'], data_cost, color=['salmon', 'lightblue'], label='Cost')
+# ax2.set_ylabel('Total Cost (₪)')
+# ax2.set_title('Cost Breakdown: Peak vs Off-Peak')
 
 # Annotate individual bars
-for i, v in enumerate(data_cost):
-    ax2.text(i, v + 0.5, f"{v:.2f}", ha='center', va='bottom', fontsize=10)
+# for i, v in enumerate(data_cost):
+#     ax2.text(i, v + 0.5, f"{v:.2f}", ha='center', va='bottom', fontsize=10)
 
 # Set Y-limit to ensure space for annotations
 # Use the combined total + a buffer
-y_max_cost = combined_total_cost * 1.15 if combined_total_cost > 0 else 5
-ax2.set_ylim(0, y_max_cost)
+# y_max_cost = combined_total_cost * 1.15 if combined_total_cost > 0 else 5
+# ax2.set_ylim(0, y_max_cost)
 
 # Add combined total cost above the bars, now with sufficient space
-ax2.text(0.5, combined_total_cost + (y_max_cost * 0.05), # Adjusted V position
-         f"Total: ₪ {combined_total_cost:.2f}", 
-         ha='center', va='bottom', fontsize=12, fontweight='bold')
+# ax2.text(0.5, combined_total_cost + (y_max_cost * 0.05), # Adjusted V position
+#          f"Total: ₪ {combined_total_cost:.2f}", 
+#          ha='center', va='bottom', fontsize=12, fontweight='bold')
 
-plt.tight_layout()
-st.pyplot(fig2)
-plt.close(fig2)
+# plt.tight_layout()
+# st.pyplot(fig2)
+# plt.close(fig2)
 
 ############
 
