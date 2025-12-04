@@ -505,7 +505,7 @@ ax.set_title('Daily Energy Consumption: Peak and Off-Peak', fontsize=14)
 ax.set_xticks(x_pos)
 ax.set_xticklabels(daily_summary_df['date_local'].dt.strftime('%Y-%m-%d'), rotation=45, ha='right')
 ax.legend()
-ax.grid(axis='y', linestyle='--', alpha=0.7)
+# ax.grid(axis='y', linestyle='--', alpha=0.7)
 
 for i, row in daily_summary_df.iterrows():
     if row['plotted_kwh_off_peak'] > 0:
