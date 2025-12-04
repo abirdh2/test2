@@ -504,7 +504,7 @@ ax.set_ylabel('Energy Consumption (kWh)', fontsize=12)
 ax.set_title('Daily Energy Consumption: Peak and Off-Peak', fontsize=14)
 ax.set_xticks(x_pos)
 ax.set_xticklabels(daily_summary_df['date_local'].dt.strftime('%Y-%m-%d'), rotation=45, ha='right')
-total_kwh = row['total_kwh']
+total_kwh = f{"row['total_kwh']:.2f"}
 y_max_kwh = total_kwh * 1.15 if total_kwh > 0 else 5
 ax.set_ylim(0, y_max_kwh)
 ax.legend()
