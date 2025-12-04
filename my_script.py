@@ -504,10 +504,9 @@ ax.set_ylabel('Energy Consumption (kWh)', fontsize=12)
 ax.set_title('Daily Energy Consumption: Peak and Off-Peak', fontsize=14)
 ax.set_xticks(x_pos)
 ax.set_xticklabels(daily_summary_df['date_local'].dt.strftime('%Y-%m-%d'), rotation=45, ha='right')
-total_kwh = f"{row['total_kwh']:.2f}"
-y_max_kwh = total_kwh * 1.15 if total_kwh > 0 else 5
-ax.set_ylim(0, y_max_kwh)
 ax.legend()
+max_total_kwh = daily_summary_df['total_kwh'].max() * 1.15
+ax.set_ylim(0, max_total_kwh)
 # ax.grid(axis='y', linestyle='--', alpha=0.7)
 
 for i, row in daily_summary_df.iterrows():
@@ -517,6 +516,7 @@ for i, row in daily_summary_df.iterrows():
         ax.text(x_pos[i], row['plotted_kwh_off_peak'] + row['plotted_kwh_peak']/2, f"{row['plotted_kwh_peak']:.2f}", ha='center', va='center', color='darkred', fontsize=8)
     if row['total_kwh'] > 0:
         ax.text(x_pos[i], row['total_kwh']+0.5, f"{row['total_kwh']:.2f}", ha='center', va='bottom', color='black', fontsize=9, fontweight='bold')
+
 
 plt.tight_layout()
 folder_daily = f"from_{START_DATE}_to_{END_DATE}"
