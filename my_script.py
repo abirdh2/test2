@@ -258,22 +258,22 @@ st.sidebar.markdown("### ⚡ Electricity Rates")
 
 RATE_CONFIG = {
     # Summer Months (6, 7, 8, 9)
-    6: {'wd_peak': 1.6895, 'wd_offpeak': 0.5283, 'we_peak': 0.5283, 'we_offpeak': 0.5283},
-    7: {'wd_peak': 1.6895, 'wd_offpeak': 0.5283, 'we_peak': 0.5283, 'we_offpeak': 0.5283},
-    8: {'wd_peak': 1.6895, 'wd_offpeak': 0.5283, 'we_peak': 0.5283, 'we_offpeak': 0.5283},
-    9: {'wd_peak': 1.6895, 'wd_offpeak': 0.5283, 'we_peak': 0.5283, 'we_offpeak': 0.5283},
+    6: {'wd_peak': 1.7224, 'wd_offpeak': 0.5142, 'we_peak': 0.5142, 'we_offpeak': 0.5142},
+    7: {'wd_peak': 1.7224, 'wd_offpeak': 0.5142, 'we_peak': 0.5142, 'we_offpeak': 0.5142},
+    8: {'wd_peak': 1.7224, 'wd_offpeak': 0.5142, 'we_peak': 0.5142, 'we_offpeak': 0.5142},
+    9: {'wd_peak': 1.7224, 'wd_offpeak': 0.5142, 'we_peak': 0.5142, 'we_offpeak': 0.5142},
     
     # Winter Months (12, 1, 2)
-    12: {'wd_peak': 1.2071, 'wd_offpeak': 0.4557, 'we_peak': 1.2071, 'we_offpeak': 0.4557},
-    1: {'wd_peak': 1.2071, 'wd_offpeak': 0.4557, 'we_peak': 1.2071, 'we_offpeak': 0.4557},
-    2: {'wd_peak': 1.2071, 'wd_offpeak': 0.4557, 'we_peak': 1.2071, 'we_offpeak': 0.4557},
+    12: {'wd_peak': 1.1533, 'wd_offpeak': 0.4746, 'we_peak': 1.1533, 'we_offpeak': 0.4746},
+    1: {'wd_peak': 1.1533, 'wd_offpeak': 0.4746, 'we_peak': 1.1533, 'we_offpeak': 0.4746},
+    2: {'wd_peak': 1.1533, 'wd_offpeak': 0.4746, 'we_peak': 1.1533, 'we_offpeak': 0.4746},
     
     # Spring/Fall Months (3, 4, 5, 10, 11) - Note: Rates match the Winter season in your spec
-    3: {'wd_peak': 0.4977, 'wd_offpeak': 0.446, 'we_peak': 0.446, 'we_offpeak': 0.446},
-    4: {'wd_peak': 0.4977, 'wd_offpeak': 0.446, 'we_peak': 0.446, 'we_offpeak': 0.446},
-    5: {'wd_peak': 0.4977, 'wd_offpeak': 0.446, 'we_peak': 0.446, 'we_offpeak': 0.446},
-    10: {'wd_peak': 0.4977, 'wd_offpeak': 0.446, 'we_peak': 0.446, 'we_offpeak': 0.446},
-    11: {'wd_peak': 0.4977, 'wd_offpeak': 0.446, 'we_peak': 0.446, 'we_offpeak': 0.446},
+    3: {'wd_peak': 0.5066, 'wd_offpeak': 0.4655, 'we_peak': 0.4655, 'we_offpeak': 0.4655},
+    4: {'wd_peak': 0.5066, 'wd_offpeak': 0.4655, 'we_peak': 0.4655, 'we_offpeak': 0.4655},
+    5: {'wd_peak': 0.5066, 'wd_offpeak': 0.4655, 'we_peak': 0.4655, 'we_offpeak': 0.4655},
+    10: {'wd_peak': 0.5066, 'wd_offpeak': 0.4655, 'we_peak': 0.4655, 'we_offpeak': 0.4655},
+    11: {'wd_peak': 0.5066, 'wd_offpeak': 0.4655, 'we_peak': 0.4655, 'we_offpeak': 0.4655},
 }
 
 # --- 🎯 Rate Adjustment Logic ---
