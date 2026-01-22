@@ -74,7 +74,7 @@ gc = gspread.authorize(creds)
 # --- 1. Load data from Google Sheet and Initial Processing ---
 # Replace 'Your Spreadsheet Title' with the exact name of your Google Sheet
 spreadsheet = gc.open('home_energy')
-worksheet = spreadsheet.get_worksheet_by_id(17794472) # Access the first sheet/tab
+worksheet = spreadsheet.get_worksheet_by_id(0) # Access the first sheet/tab
 
 # Get all data as a list of lists
 data = worksheet.get_all_values()
