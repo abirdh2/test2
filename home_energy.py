@@ -112,6 +112,19 @@ df.to_sql("raw_data", conn, if_exists="replace", index=False)
 conn.execute("DROP VIEW IF EXISTS hourly_deltas")
 conn.execute("""
 CREATE VIEW hourly_deltas AS
+WITH hourly_snapshots AS (
+    SELECT 
+        device_id,
+        received_at_local_naive,
+        received_at_local,
+        received_at_utc,
+        total_wh,
+        ROW_NUMBER() OVER (
+            PARTITION BY device_id, DATE(received_at_local_naive), STRFTIME('%H', received_at_local_naive) 
+            ORDER BY received_at_local_naive DESC
+        ) as rank
+    FROM raw_data
+)
 SELECT
     device_id,
     CASE
@@ -121,13 +134,11 @@ SELECT
     END AS date_local,
     (CAST(STRFTIME('%H', received_at_local_naive) AS INTEGER) - 1 + 24) % 24 AS hour_local,
     received_at_local,
-    received_at_utc,
-    STRFTIME('%H', received_at_utc) AS hour_utc,
     total_wh,
     LAG(total_wh) OVER (PARTITION BY device_id ORDER BY received_at_local) AS prev_wh,
-    (total_wh - LAG(total_wh) OVER (PARTITION BY device_id ORDER BY received_at_local)) / 1000.0 AS delta_kwh,
-    (CAST(STRFTIME('%H', received_at_local_naive) AS INTEGER) - 1 + 24) % 24 AS prev_hour_local_original
-FROM raw_data
+    (total_wh - LAG(total_wh) OVER (PARTITION BY device_id ORDER BY received_at_local)) / 1000.0 AS delta_kwh
+FROM hourly_snapshots
+WHERE rank = 1
 """)
 
 # --- View for Raw Hourly Presence Check ---
