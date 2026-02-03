@@ -177,16 +177,22 @@ billing_plan = st.sidebar.selectbox(
     )
 )
 
+# Regular price:
+full_price = 0.6432
+fixed_discount_price = full_price * 0.935
+day_discount_price = full_price * 0.84
+night_discount_price = full_price * 0.79
+
 # --- ADDED: Editable Tariffs ---
 with st.sidebar.expander("⚙️ Adjust Tariffs (₪/kWh)"):
     if "Option 1" in billing_plan:
-        rate_fixed = st.number_input("Fixed Rate", value=0.60, step=0.01, format="%.2f")
+        rate_fixed = st.number_input("Fixed Rate", value=fixed_discount_price, step=0.0001, format="%.2f")
     elif "Option 2" in billing_plan:
-        rate_day_low = st.number_input("Low Rate (Daytime)", value=0.50, step=0.01, format="%.2f")
-        rate_day_high = st.number_input("High Rate (Other times)", value=0.70, step=0.01, format="%.2f")
+        rate_day_low = st.number_input("Low Rate (Daytime)", value=day_discount_price, step=0.0001, format="%.2f")
+        rate_day_high = st.number_input("High Rate (Other times)", value=full_price, step=0.0001, format="%.2f")
     elif "Option 3" in billing_plan:
-        rate_night_low = st.number_input("Low Rate (Nighttime)", value=0.40, step=0.01, format="%.2f")
-        rate_night_high = st.number_input("High Rate (Other times)", value=0.70, step=0.01, format="%.2f")
+        rate_night_low = st.number_input("Low Rate (Nighttime)", value=night_discount_price, step=0.01, format="%.2f")
+        rate_night_high = st.number_input("High Rate (Other times)", value=full_price, step=0.0001, format="%.2f")
 
 with sqlite3.connect("energy_data.db") as conn_hourly:
     df_calc = pd.read_sql_query("SELECT * FROM hourly_deltas", conn_hourly)
