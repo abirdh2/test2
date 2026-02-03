@@ -213,7 +213,7 @@ df_calc['is_cheap_rate'] = False
 
 if "Option 1" in billing_plan:
     df_calc['rate_applied'] = rate_fixed
-    df_calc['is_cheap_rate'] = False 
+    df_calc['is_cheap_rate'] = True 
 elif "Option 2" in billing_plan:
     condition = (is_sun_to_thu_mask) & (df_calc['hour_local'] >= 7) & (df_calc['hour_local'] < 17)
     df_calc['rate_applied'] = np.where(condition, rate_day_low, rate_day_high)
